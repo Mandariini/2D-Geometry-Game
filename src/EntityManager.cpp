@@ -14,6 +14,7 @@ void EntityManager::update()
 		m_entities.push_back(e);
 		m_entityMap[e->getTag()].push_back(e);
 	}
+	m_entitiesToAdd.clear();
 
 	// Remove from all entities
 	removeDeadEntities(m_entities);
@@ -24,8 +25,6 @@ void EntityManager::update()
 	{
 		removeDeadEntities(entityVec);
 	}
-
-	//m_entitiesToAdd.clear();
 }
 
 std::shared_ptr<Entity> EntityManager::addEntity(const std::string& tag)
@@ -52,11 +51,19 @@ void EntityManager::removeDeadEntities(EntityVec& vec)
 	// Remove entities set to m_alive false
 
 	// Avoid iterator invalidation
-	// G: how to remove from vector while iterating over it
 
-	for (auto e : vec)
+	EntityVec::iterator it;
+
+	for (it = vec.begin(); it != vec.end(); )
 	{
-		// if e is dead remove from m_entities and map
-		// ITERATOR INVALIDATION
+		if (!(*it)->isActive())
+		{
+			it = vec.erase(it);
+		}
+		else
+		{
+			it++;
+		}
 	}
+
 }
