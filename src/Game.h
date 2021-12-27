@@ -1,7 +1,6 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
-
+#include "Common.h"
 #include "EntityManager.h"
 #include "Entity.h"
 
