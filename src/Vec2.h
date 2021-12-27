@@ -13,6 +13,7 @@ public:
 	Vec2 operator + (const Vec2& rhs) const;
 	Vec2 operator - (const Vec2& rhs) const;
 	Vec2 operator / (const Vec2& rhs) const;
+	Vec2 operator / (const float& rhs) const;
 	Vec2 operator * (const Vec2& rhs) const;
 
 	void operator += (const Vec2& rhs);
