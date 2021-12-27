@@ -1,4 +1,7 @@
 #pragma once
+
+#include "Common.h"
+
 class Vec2
 {
 public:
@@ -19,6 +22,8 @@ public:
 
 	bool operator == (const Vec2& rhs) const;
 	bool operator != (const Vec2& rhs) const;
+
+	friend std::ostream& operator<<(std::ostream& os, const Vec2& vec);
 
 	double x;
 	double y;

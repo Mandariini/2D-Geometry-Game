@@ -7,5 +7,7 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include <cmath>
+#include <iostream>
 
 #include "Vec2.h"

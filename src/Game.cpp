@@ -35,7 +35,7 @@ void Game::init(const std::string& config)
 	//TODO read in config file here
 	// Use the premade PlayerConfig... variables
 
-	std::ifstream fin(config);
+	//std::ifstream fin(config);
 
 	// set up default window parameters
 	m_window.create(sf::VideoMode(1280, 720), "Shape game");
