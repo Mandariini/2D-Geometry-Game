@@ -141,25 +141,28 @@ void Game::setPaused(bool paused)
 void Game::sMovement()
 {
 	// Read m_player->cInput component to determine if player is moving
-
 	Vec2 playerVelocity;
 	if (m_player->cInput->left)
 	{
-		playerVelocity.x -= m_playerConfig.S;
+		playerVelocity.x += m_playerConfig.S;
 	}
 	if (m_player->cInput->right)
 	{
-		playerVelocity.x += m_playerConfig.S;
+		playerVelocity.x -= m_playerConfig.S;
 	}
-	// up,down
+	if (m_player->cInput->up)
+	{
+		playerVelocity.y -= m_playerConfig.S;
+	}
+	if (m_player->cInput->down)
+	{
+		playerVelocity.y += m_playerConfig.S;
+	}
 
 	m_player->cTransform->velocity = playerVelocity;
-
 	m_player->cTransform->pos += m_player->cTransform->velocity;
 
-	//m_player->cTransform->pos.x += m_player->cTransform->velocity.x;
-	//m_player->cTransform->pos.y += m_player->cTransform->velocity.y;
-
+	// Move all other entities
 	for (auto e : m_entityManager.getEntities())
 	{
 		e->cTransform->pos += e->cTransform->velocity;
@@ -185,16 +188,20 @@ void Game::sUserInput()
 			switch (event.key.code)
 			{
 			case sf::Keyboard::W:
+			case sf::Keyboard::Up:
 				std::cout << "W press" << std::endl;
 				m_player->cInput->up = true;
 				break;
 			case sf::Keyboard::S:
+			case sf::Keyboard::Down:
 				m_player->cInput->down = true;
 				break;
 			case sf::Keyboard::D:
+			case sf::Keyboard::Right:
 				m_player->cInput->left = true;
 				break;
 			case sf::Keyboard::A:
+			case sf::Keyboard::Left:
 				m_player->cInput->right = true;
 				break;
 			}
@@ -206,15 +213,19 @@ void Game::sUserInput()
 			switch (event.key.code)
 			{
 			case sf::Keyboard::W:
+			case sf::Keyboard::Up:
 				m_player->cInput->up = false;
 				break;
 			case sf::Keyboard::S:
+			case sf::Keyboard::Down:
 				m_player->cInput->down = false;
 				break;
 			case sf::Keyboard::D:
+			case sf::Keyboard::Right:
 				m_player->cInput->left = false;
 				break;
 			case sf::Keyboard::A:
+			case sf::Keyboard::Left:
 				m_player->cInput->right = false;
 				break;
 			}
@@ -225,7 +236,6 @@ void Game::sUserInput()
 			if (event.mouseButton.button == sf::Mouse::Left)
 			{
 				std::cout << event.mouseButton.x << "," << event.mouseButton.y << std::endl;
-				// call spawnBullet
 				spawnBullet(m_player, Vec2(event.mouseButton.x, event.mouseButton.y));
 			}
 
