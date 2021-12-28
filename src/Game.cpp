@@ -23,9 +23,9 @@ void Game::run()
 		sMovement();
 		sCollision();
 		sUserInput();
+		sLifespan();
 		sRender();
 
-		// may need to be moved when pause implemented
 		m_currentFrame++;
 	}
 }
@@ -306,6 +306,19 @@ void Game::sLifespan()
 	for (auto e : m_entityManager.getEntities())
 	{
 		if (!e->cLifespan) { continue; }
+		else if (e->cLifespan->remaining > 0)
+		{
+			e->cLifespan->remaining -= 1;
+
+			auto color = e->cShape->circle.getFillColor();
+			int newAlhpa = (e->cLifespan->total - e->cLifespan->remaining);
+			sf::Color newColor(color.r, color.g, color.b, newAlhpa);
+			e->cShape->circle.setFillColor(newColor);
+		}
+		else if (e->cLifespan->remaining == 0)
+		{
+			e->destroy();
+		}
 	}
 
 	// for all entities, if has lifespan and alive, scale its alpha channel properly
