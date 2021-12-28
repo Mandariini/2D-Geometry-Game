@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[])
 {
-    Game g("config.txt");
+    Game g("src/config.txt");
     g.run();
     return 0;
 }

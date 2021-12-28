@@ -33,13 +33,103 @@ void Game::run()
 void Game::init(const std::string& config)
 {
 	//TODO read in config file here
-	// Use the premade PlayerConfig... variables
 
-	//std::ifstream fin(config);
+	int wWidth = 1280;
+	int wHeight = 720;
+	int framerate = 60;
+	bool fullscreen = false;
 
-	// set up default window parameters
-	m_window.create(sf::VideoMode(1280, 720), "Shape game");
-	m_window.setFramerateLimit(60);
+	// Common to all entities
+	int shapeRadius, collisionRadius;
+	int outlineR, outlineG, outlineB;
+	int outlineThickness;
+
+	// Enemy specific configs
+	int vmin, vmax;
+	int lifespan = 300, spawnInterval = 120;
+	float smin, smax;
+
+	// Others
+	float speed = 1; // player and bullet
+	int vertices; // player and bullet
+	int fillR, fillG, fillB; // player and bullet
+
+	std::ifstream fin(config, std::ifstream::in);
+	std::string type;
+	while (fin >> type)
+	{
+		if (type == "Window")
+		{
+			fin >> wWidth >> wHeight >> framerate >> fullscreen;
+		}
+		else if (type == "Font")
+		{
+			std::string fileName;
+			fin >> fileName;
+			if (!m_font.loadFromFile(fileName))
+			{
+				std::cerr << "Could not load font." << std::endl;
+			}
+		}
+		else if (type == "Player")
+		{
+			fin >> shapeRadius >> collisionRadius >> speed >> fillR >> fillG >> fillB >> outlineR >> outlineG >> outlineB >> outlineThickness >> vertices;
+
+			m_playerConfig.SR = shapeRadius;
+			m_playerConfig.CR = collisionRadius;
+			m_playerConfig.S = speed;
+			m_playerConfig.FR = fillR;
+			m_playerConfig.FG = fillG;
+			m_playerConfig.FB = fillB;
+			m_playerConfig.OR = outlineR;
+			m_playerConfig.OG = outlineG;
+			m_playerConfig.OB = outlineB;
+			m_playerConfig.OT = outlineThickness;
+			m_playerConfig.V = vertices;
+		}
+		else if (type == "Enemy")
+		{
+			fin >> shapeRadius >> collisionRadius >> smin >> smax >> outlineR >> outlineG >> outlineB >> outlineThickness >> vmin >> vmax >> lifespan >> spawnInterval;
+
+			m_enemyConfig.SR = shapeRadius;
+			m_enemyConfig.CR = collisionRadius;
+			m_enemyConfig.SMIN = smin;
+			m_enemyConfig.SMAX = smax;
+			m_enemyConfig.OR = outlineR;
+			m_enemyConfig.OG = outlineG;
+			m_enemyConfig.OB = outlineB;
+			m_enemyConfig.OT = outlineThickness;
+			m_enemyConfig.VMIN = vmin;
+			m_enemyConfig.VMAX = vmax;
+			m_enemyConfig.L = lifespan;
+			m_enemyConfig.SI = spawnInterval;
+		}
+		else if (type == "Bullet")
+		{
+			fin >> shapeRadius >> collisionRadius >> speed >> fillR >> fillG >> fillB >> outlineR >> outlineG >> outlineB >> outlineThickness >> vertices >> lifespan;
+
+			m_bulletConfig.SR = shapeRadius;
+			m_bulletConfig.CR = collisionRadius;
+			m_bulletConfig.S = speed;
+			m_bulletConfig.FR = fillR;
+			m_bulletConfig.FG = fillG;
+			m_bulletConfig.FB = fillB;
+			m_bulletConfig.OR = outlineR;
+			m_bulletConfig.OG = outlineG;
+			m_bulletConfig.OB = outlineB;
+			m_bulletConfig.OT = outlineThickness;
+			m_bulletConfig.V = vertices;
+			m_bulletConfig.L = lifespan;
+		}
+	}
+
+	// TODO: Fullscreen
+
+	if (!fullscreen)
+	{
+		m_window.create(sf::VideoMode(wWidth, wHeight), "Geometry game");
+	}
+	m_window.setFramerateLimit(framerate);
 
 	spawnPlayer();
 }
