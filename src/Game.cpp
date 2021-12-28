@@ -281,17 +281,26 @@ void Game::sCollision()
 		{
 			// distance between entities < sum of the radiases = collision
 			float dist = p->cTransform->pos.dist(e->cTransform->pos);
-			//p->cCollision
+			if (dist < (p->cCollision->radius + e->cCollision->radius))
+			{
+				p->destroy();
+			}
 		}
 	}
 
-	for (auto p : m_entityManager.getEntities("bullet"))
+	for (auto b : m_entityManager.getEntities("bullet"))
 	{
 		for (auto e : m_entityManager.getEntities("enemy"))
 		{
 			// distance between entities < sum of the radiases = collision
-			float dist = p->cTransform->pos.dist(e->cTransform->pos);
-			//p->cCollision
+			float dist = b->cTransform->pos.dist(e->cTransform->pos);
+
+			if (dist < (b->cCollision->radius + e->cCollision->radius))
+			{
+				b->destroy();
+				e->destroy();
+				m_score += e->cScore->score;
+			}
 		}
 	}
 
@@ -343,13 +352,16 @@ void Game::spawnPlayer()
 	auto entity = m_entityManager.addEntity("player");
 
 	// Spawn at (200,200) with velocity (1,1) and angle 0
-	entity->cTransform = std::make_shared<CTransform>(Vec2(200.0f, 200.0f), Vec2(1.0f, 1.0f), 0.0f);
+	Vec2 middlePos = Vec2(m_window.getSize().x / 2, m_window.getSize().y / 2);
+	entity->cTransform = std::make_shared<CTransform>(middlePos, Vec2(0.0f, 0.0f), 0.0f);
 
 	// Entity shape: radius 32, 8 sides, dark grey fill and red outline of thickness 4
-	entity->cShape = std::make_shared<CShape>(32, 8, sf::Color(10, 10, 10), sf::Color(255, 0, 0), 4.0f);
+	entity->cShape = std::make_shared<CShape>(32, 7, sf::Color(10, 10, 10), sf::Color(255, 0, 0), 4.0f);
 
 	// Add input component to the player
 	entity->cInput = std::make_shared<CInput>();
+
+	entity->cCollision = std::make_shared<CCollision>(32);
 
 	// Set entity as player
 	m_player = entity;
