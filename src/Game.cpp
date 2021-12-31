@@ -304,10 +304,22 @@ void Game::sCollision()
 		}
 	}
 
-	// enemies bounce off falls and player cant leave bounds
+	// Enemies bounce off falls
+	for (auto& e : m_entityManager.getEntities("enemy"))
+	{
+		if (e->cTransform->pos.x - e->cCollision->radius <= 0 ||
+			e->cTransform->pos.x + e->cCollision->radius >= m_window.getSize().x)
+		{
+			e->cTransform->velocity.x *= -1;
+		}
+		if (e->cTransform->pos.y - e->cCollision->radius <= 0 ||
+			e->cTransform->pos.y + e->cCollision->radius >= m_window.getSize().y)
+		{
+			e->cTransform->velocity.y *= -1;
+		}
+	}
 
-	// all collisions between entities
-	// collision radius, not the shape radius
+	// Player cant leave bounds
 }
 
 void Game::sLifespan()
