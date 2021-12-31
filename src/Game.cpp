@@ -19,11 +19,11 @@ void Game::run()
 
 		}
 
-		sEnemySpawner();
-		sMovement();
 		sCollision();
+		sMovement();
 		sUserInput();
 		sLifespan();
+		sEnemySpawner();
 		sRender();
 
 		m_currentFrame++;
@@ -163,7 +163,7 @@ void Game::sMovement()
 	m_player->cTransform->pos += m_player->cTransform->velocity;
 
 	// Move all other entities
-	for (auto e : m_entityManager.getEntities())
+	for (auto& e : m_entityManager.getEntities())
 	{
 		e->cTransform->pos += e->cTransform->velocity;
 	}
@@ -171,8 +171,6 @@ void Game::sMovement()
 
 void Game::sUserInput()
 {
-	// set the player's input component variables here
-	// not implement player's movement logic here
 	// Movement system will read variables set here
 
 	sf::Event event;
@@ -251,7 +249,7 @@ void Game::sRender()
 {
 	m_window.clear();
 
-	for (auto e : m_entityManager.getEntities())
+	for (auto& e : m_entityManager.getEntities())
 	{
 		e->cShape->circle.setPosition(e->cTransform->pos.x, e->cTransform->pos.y);
 
@@ -275,9 +273,10 @@ void Game::sEnemySpawner()
 
 void Game::sCollision()
 {
-	for (auto p : m_entityManager.getEntities("player"))
+	// Player and enemy collision
+	for (auto& p : m_entityManager.getEntities("player"))
 	{
-		for (auto e : m_entityManager.getEntities("enemy"))
+		for (auto& e : m_entityManager.getEntities("enemy"))
 		{
 			// distance between entities < sum of the radiases = collision
 			float dist = p->cTransform->pos.dist(e->cTransform->pos);
@@ -288,9 +287,10 @@ void Game::sCollision()
 		}
 	}
 
-	for (auto b : m_entityManager.getEntities("bullet"))
+	// Bullet and enemy collision
+	for (auto& b : m_entityManager.getEntities("bullet"))
 	{
-		for (auto e : m_entityManager.getEntities("enemy"))
+		for (auto& e : m_entityManager.getEntities("enemy"))
 		{
 			// distance between entities < sum of the radiases = collision
 			float dist = b->cTransform->pos.dist(e->cTransform->pos);
@@ -312,12 +312,12 @@ void Game::sCollision()
 
 void Game::sLifespan()
 {
-	for (auto e : m_entityManager.getEntities())
+	for (auto& e : m_entityManager.getEntities())
 	{
 		if (!e->cLifespan) { continue; }
 		else if (e->cLifespan->remaining > 0)
 		{
-			e->cLifespan->remaining -= 1;
+			//e->cLifespan->remaining -= 1;
 
 			auto color = e->cShape->circle.getFillColor();
 			int newAlhpa = (e->cLifespan->total - e->cLifespan->remaining);
