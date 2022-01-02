@@ -399,26 +399,24 @@ void Game::sLifespan()
 
 void Game::spawnPlayer()
 {
-	// TODO: finish adding all properties of the player with the correct values from config
-
-	// We create every entity by calling EntityManager.addEntity(tag)
 	auto entity = m_entityManager.addEntity("player");
 
 	// Spawn at (200,200) with velocity (1,1) and angle 0
 	Vec2 middlePos = Vec2(m_window.getSize().x / 2, m_window.getSize().y / 2);
 	entity->cTransform = std::make_shared<CTransform>(middlePos, Vec2(0.0f, 0.0f), 0.0f);
 
-	// Entity shape: radius 32, 8 sides, dark grey fill and red outline of thickness 4
-	entity->cShape = std::make_shared<CShape>(32, 7, sf::Color(10, 10, 10), sf::Color(255, 0, 0), 4.0f);
+	entity->cShape = std::make_shared<CShape>(
+		m_playerConfig.SR, // Shape radius
+		m_playerConfig.V, // Sides
+		sf::Color(m_playerConfig.FR, m_playerConfig.FG, m_playerConfig.FB, 255), // Fill color
+		sf::Color(m_playerConfig.OR, m_playerConfig.OG, m_playerConfig.OB), // Outline color
+		m_playerConfig.OT // Outline thickness
+		);
 
-	// Add input component to the player
 	entity->cInput = std::make_shared<CInput>();
+	entity->cCollision = std::make_shared<CCollision>(m_playerConfig.CR); // Collision radius
 
-	entity->cCollision = std::make_shared<CCollision>(32);
-
-	// Set entity as player
 	m_player = entity;
-
 }
 
 void Game::spawnEnemy()
@@ -428,13 +426,27 @@ void Game::spawnEnemy()
 
 	auto enemy = m_entityManager.addEntity("enemy");
 
-	// Spawn at (100,100) with velocity (1,1) and angle 0
-	enemy->cTransform = std::make_shared<CTransform>(Vec2(100.0f, 100.0f), Vec2(1.0f, 1.0f), 0.0f);
-	// Entity shape: radius 32, 8 sides, dark grey fill and red outline of thickness 4
-	enemy->cShape = std::make_shared<CShape>(32, 8, sf::Color(10, 10, 10), sf::Color(255, 0, 0), 4.0f);
-	enemy->cCollision = std::make_shared<CCollision>(32);
-	enemy->cScore = std::make_shared<CScore>(10);
-	enemy->cLifespan = std::make_shared<CLifespan>(300);
+	// Spawn at random position with random velocity and angle 0
+	// Random between min and max: rand()%(max-min+1)+min
+	float randX = rand() % ((m_window.getSize().x - m_enemyConfig.CR) - m_enemyConfig.CR + 1) + m_enemyConfig.CR;
+	float randY = rand() % ((m_window.getSize().y - m_enemyConfig.CR) - m_enemyConfig.CR + 1) + m_enemyConfig.CR;
+
+	float xVelocity = rand() % (int)(m_enemyConfig.SMAX - m_enemyConfig.SMIN + 1) + m_enemyConfig.SMIN;
+	float yVelocity = rand() % (int)(m_enemyConfig.SMAX - m_enemyConfig.SMIN + 1) + m_enemyConfig.SMIN;
+
+	enemy->cTransform = std::make_shared<CTransform>(Vec2(randX, randY), Vec2(xVelocity, yVelocity), 0.0f);
+	
+	int vertices = rand() % (m_enemyConfig.VMAX - m_enemyConfig.VMIN + 1) + m_enemyConfig.VMIN;
+	enemy->cShape = std::make_shared<CShape>(
+		m_enemyConfig.SR, // Shape radius
+		vertices, // Sides
+		sf::Color(rand() % 255, rand() % 255, rand() % 255, 255), // Fill color
+		sf::Color(m_enemyConfig.OR, m_enemyConfig.OG, m_enemyConfig.OB), // Outline color
+		m_playerConfig.OT // Outline thickness
+		);
+	enemy->cCollision = std::make_shared<CCollision>(m_enemyConfig.CR);
+	enemy->cScore = std::make_shared<CScore>(vertices*100);
+	enemy->cLifespan = std::make_shared<CLifespan>(m_enemyConfig.L);
 
 	m_lastEnemySpawnTime = m_currentFrame;
 }
@@ -463,22 +475,22 @@ void Game::spawnBullet(std::shared_ptr<Entity> entity, const Vec2& mousePos)
 {
 	// bullet speed is given as a scalar speed, pixels per frame added to the bullet
 	// set the velocity by using formula, traveling x-axel vs traveling 45 degree angle
-	// x = cos(45)*scalar
 
 	float dist = entity->cTransform->pos.dist(mousePos);
 	Vec2 normalizedVec = (mousePos - entity->cTransform->pos) / dist;
-	float vx = cosf(45 * M_PI / 180) * normalizedVec.x * 1;
-	float vy = sinf(45 * M_PI / 180) * normalizedVec.y * 1;
-	Vec2 velocityVec = Vec2(vx, vy);
+	float vx = cosf(45 * M_PI / 180) * normalizedVec.x * m_bulletConfig.S;
+	float vy = sinf(45 * M_PI / 180) * normalizedVec.y * m_bulletConfig.S;
 
 	auto bullet = m_entityManager.addEntity("bullet");
 
-	bullet->cTransform = std::make_shared<CTransform>(entity->cTransform->pos, velocityVec, 0.0f);
-	// Entity shape: radius 32, 8 sides, dark grey fill and red outline of thickness 4
-	bullet->cShape = std::make_shared<CShape>(4, 8, sf::Color(10, 10, 10), sf::Color(255, 0, 0), 4.0f);
-	bullet->cCollision = std::make_shared<CCollision>(4);
-	bullet->cScore = std::make_shared<CScore>(10);
-	bullet->cLifespan = std::make_shared<CLifespan>(300);
+	bullet->cTransform = std::make_shared<CTransform>(entity->cTransform->pos, Vec2(vx, vy), 0.0f);
+	bullet->cShape = std::make_shared<CShape>(m_bulletConfig.SR,
+		m_bulletConfig.V, 
+		sf::Color(m_bulletConfig.FR, m_bulletConfig.FG, m_bulletConfig.FB, 255),
+		sf::Color(m_bulletConfig.OR, m_bulletConfig.OG, m_bulletConfig.OB),
+		m_bulletConfig.OT);
+	bullet->cCollision = std::make_shared<CCollision>(m_bulletConfig.CR);
+	bullet->cLifespan = std::make_shared<CLifespan>(m_bulletConfig.L);
 }
 
 void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
