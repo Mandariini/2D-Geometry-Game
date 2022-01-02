@@ -19,11 +19,11 @@ void Game::run()
 
 		}
 
-		sCollision();
 		sMovement();
 		sUserInput();
 		sLifespan();
 		sEnemySpawner();
+		sCollision();
 		sRender();
 
 		m_currentFrame++;
@@ -32,8 +32,6 @@ void Game::run()
 
 void Game::init(const std::string& config)
 {
-	//TODO read in config file here
-
 	int wWidth = 1280;
 	int wHeight = 720;
 	int framerate = 60;
@@ -54,6 +52,8 @@ void Game::init(const std::string& config)
 	int vertices; // player and bullet
 	int fillR, fillG, fillB; // player and bullet
 
+	int textWidth, textR, textG, textB;
+
 	std::ifstream fin(config, std::ifstream::in);
 	std::string type;
 	while (fin >> type)
@@ -65,10 +65,18 @@ void Game::init(const std::string& config)
 		else if (type == "Font")
 		{
 			std::string fileName;
-			fin >> fileName;
+			fin >> fileName >> textWidth >> textR >> textG >> textB;
 			if (!m_font.loadFromFile(fileName))
 			{
 				std::cerr << "Could not load font." << std::endl;
+			}
+			else
+			{
+				m_text.setFont(m_font);
+				m_text.setString("Points: 99999");
+				m_text.setCharacterSize(textWidth);
+				m_text.setFillColor(sf::Color(textR, textG, textB, 255));
+				m_text.setPosition(wWidth - m_text.getLocalBounds().width, 0);
 			}
 		}
 		else if (type == "Player")
@@ -123,11 +131,13 @@ void Game::init(const std::string& config)
 		}
 	}
 
-	// TODO: Fullscreen
-
 	if (!fullscreen)
 	{
 		m_window.create(sf::VideoMode(wWidth, wHeight), "Geometry game");
+	}
+	else if (fullscreen)
+	{
+		m_window.create(sf::VideoMode::getDesktopMode(), "Geometry game", sf::Style::Fullscreen);
 	}
 	m_window.setFramerateLimit(framerate);
 
