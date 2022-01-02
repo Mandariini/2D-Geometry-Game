@@ -244,6 +244,7 @@ void Game::sUserInput()
 			if (event.mouseButton.button == sf::Mouse::Left)
 			{
 				std::cout << event.mouseButton.x << "," << event.mouseButton.y << std::endl;
+				//m_player->cInput->shoot = true;
 				spawnBullet(m_player, Vec2(event.mouseButton.x, event.mouseButton.y));
 			}
 
@@ -269,13 +270,16 @@ void Game::sRender()
 		m_window.draw(e->cShape->circle);
 	}
 
+	m_text.setString("Points: " + std::to_string(m_score));
+	m_window.draw(m_text);
+
 	m_window.display();
 }
 
 void Game::sEnemySpawner()
 {
 	// (m_currentFrame - m_lastEnemySpawnTime) to determine how long has been
-	if (m_currentFrame - m_lastEnemySpawnTime >= 100)
+	if (m_currentFrame - m_lastEnemySpawnTime >= m_enemyConfig.SI)
 	{
 		spawnEnemy();
 	}
@@ -310,7 +314,15 @@ void Game::sCollision()
 				b->destroy();
 				e->destroy();
 				m_score += e->cScore->score;
+				continue;
 			}
+		}
+		if (b->cTransform->pos.x < 0 ||
+			b->cTransform->pos.x > m_window.getSize().x ||
+			b->cTransform->pos.y < 0 ||
+			b->cTransform->pos.y > m_window.getSize().y)
+		{
+			b->destroy();
 		}
 	}
 
@@ -330,6 +342,25 @@ void Game::sCollision()
 	}
 
 	// Player cant leave bounds
+	for (auto& p : m_entityManager.getEntities("player"))
+	{
+		if (p->cTransform->pos.x - p->cCollision->radius <= 0)
+		{
+			p->cInput->right = false;
+		}
+		if (p->cTransform->pos.y - p->cCollision->radius <= 0)
+		{
+			p->cInput->up = false;
+		}
+		if (p->cTransform->pos.x + p->cCollision->radius >= m_window.getSize().x)
+		{
+			p->cInput->left = false;
+		}
+		if (p->cTransform->pos.y + p->cCollision->radius >= m_window.getSize().y)
+		{
+			p->cInput->down = false;
+		}
+	}
 }
 
 void Game::sLifespan()
@@ -341,10 +372,10 @@ void Game::sLifespan()
 		{
 			//e->cLifespan->remaining -= 1;
 
-			auto color = e->cShape->circle.getFillColor();
-			int newAlhpa = (e->cLifespan->total - e->cLifespan->remaining);
-			sf::Color newColor(color.r, color.g, color.b, newAlhpa);
-			e->cShape->circle.setFillColor(newColor);
+			//auto color = e->cShape->circle.getFillColor();
+			//int newAlhpa = (e->cLifespan->total - e->cLifespan->remaining);
+			//sf::Color newColor(color.r, color.g, color.b, newAlhpa);
+			//e->cShape->circle.setFillColor(newColor);
 		}
 		else if (e->cLifespan->remaining == 0)
 		{
