@@ -27,6 +27,12 @@ void EntityManager::update()
 	}
 }
 
+void EntityManager::clearEntities()
+{
+	m_entityMap.clear();
+	m_entities.clear();
+}
+
 std::shared_ptr<Entity> EntityManager::addEntity(const std::string& tag)
 {
 	auto e = std::shared_ptr<Entity>(new Entity(tag, m_totalEntities++));

@@ -315,6 +315,19 @@ void Game::sCollision()
 			if (dist < (p->cCollision->radius + e->cCollision->radius))
 			{
 				p->destroy();
+				restart();
+				break;
+			}
+		}
+		for (auto& e : m_entityManager.getEntities("smallEnemy"))
+		{
+			// distance between entities < sum of the radiases = collision
+			float dist = p->cTransform->pos.dist(e->cTransform->pos);
+			if (dist < (p->cCollision->radius + e->cCollision->radius))
+			{
+				p->destroy();
+				restart();
+				break;
 			}
 		}
 	}
@@ -330,6 +343,22 @@ void Game::sCollision()
 			if (dist < (b->cCollision->radius + e->cCollision->radius))
 			{
 				b->destroy();
+				//m_player->cInput->shoot = false;
+				spawnSmallEnemies(e);
+				e->destroy();
+				m_score += e->cScore->score;
+				continue;
+			}
+		}
+		for (auto& e : m_entityManager.getEntities("smallEnemy"))
+		{
+			// distance between entities < sum of the radiases = collision
+			float dist = b->cTransform->pos.dist(e->cTransform->pos);
+
+			if (dist < (b->cCollision->radius + e->cCollision->radius))
+			{
+				b->destroy();
+				//m_player->cInput->shoot = false;
 				e->destroy();
 				m_score += e->cScore->score;
 				continue;
@@ -341,43 +370,25 @@ void Game::sCollision()
 			b->cTransform->pos.y > m_window.getSize().y)
 		{
 			b->destroy();
+			//m_player->cInput->shoot = false;
 		}
 	}
 
-	// Enemies bounce off falls
+	// Enemies and small enemies bounce off falls
 	for (auto& e : m_entityManager.getEntities("enemy"))
 	{
-		if (e->cTransform->pos.x - e->cCollision->radius <= 0 ||
-			e->cTransform->pos.x + e->cCollision->radius >= m_window.getSize().x)
-		{
-			e->cTransform->velocity.x *= -1;
-		}
-		if (e->cTransform->pos.y - e->cCollision->radius <= 0 ||
-			e->cTransform->pos.y + e->cCollision->radius >= m_window.getSize().y)
-		{
-			e->cTransform->velocity.y *= -1;
-		}
+		checkWindowCollision(e);
+	}
+
+	for (auto& e : m_entityManager.getEntities("smallEnemy"))
+	{
+		checkWindowCollision(e);
 	}
 
 	// Player cant leave bounds
 	for (auto& p : m_entityManager.getEntities("player"))
 	{
-		if (p->cTransform->pos.x - p->cCollision->radius <= 0)
-		{
-			p->cInput->right = false;
-		}
-		if (p->cTransform->pos.y - p->cCollision->radius <= 0)
-		{
-			p->cInput->up = false;
-		}
-		if (p->cTransform->pos.x + p->cCollision->radius >= m_window.getSize().x)
-		{
-			p->cInput->left = false;
-		}
-		if (p->cTransform->pos.y + p->cCollision->radius >= m_window.getSize().y)
-		{
-			p->cInput->down = false;
-		}
+		checkWindowCollision(p);
 	}
 }
 
@@ -388,31 +399,23 @@ void Game::sLifespan()
 		if (!e->cLifespan) { continue; }
 		else if (e->cLifespan->remaining > 0)
 		{
-			//e->cLifespan->remaining -= 1;
+			e->cLifespan->remaining -= 1;
 
-			//auto color = e->cShape->circle.getFillColor();
-			//int newAlhpa = (e->cLifespan->total - e->cLifespan->remaining);
-			//sf::Color newColor(color.r, color.g, color.b, newAlhpa);
-			//e->cShape->circle.setFillColor(newColor);
+			auto fillColor = e->cShape->circle.getFillColor();
+			auto outlineColor = e->cShape->circle.getOutlineColor();
+
+			int newAlpha = ((float)e->cLifespan->remaining / (float)e->cLifespan->total) * 255;
+			sf::Color newFillColor(fillColor.r, fillColor.g, fillColor.b, newAlpha);
+			sf::Color newOutlineColor(outlineColor.r, outlineColor.g, outlineColor.b, newAlpha);
+
+			e->cShape->circle.setFillColor(newFillColor);
+			e->cShape->circle.setOutlineColor(newOutlineColor);
 		}
 		else if (e->cLifespan->remaining == 0)
 		{
 			e->destroy();
 		}
 	}
-
-	// for all entities, if has lifespan and alive, scale its alpha channel properly
-	// if entity has no lifespan component, skip it
-	// if entity has remaining > 0 current lifespan, subtract 1
-	// if has lifespan and its time is up, destroy it
-	// has been alive for m_currentFrame - e->cLifespan->frameCreated frames
-
-	/*
-	auto color = m_player->cShape->circle.getFillColor();
-	int newAlhpa = 100;
-	sf::Color newColor(color.r, color.g, color.b, newAlhpa);
-	m_player->cShape->circle.setFillColor(newColor);
-	*/
 }
 
 void Game::spawnPlayer()
@@ -439,20 +442,17 @@ void Game::spawnPlayer()
 
 void Game::spawnEnemy()
 {
-	// TODO: enemy spawned with m_enemyConfig variables
-	// spawn within bounds of the window
-
 	auto enemy = m_entityManager.addEntity("enemy");
 
-	// Spawn at random position with random velocity and angle 0
 	// Random between min and max: rand()%(max-min+1)+min
 	float randX = rand() % ((m_window.getSize().x - m_enemyConfig.CR) - m_enemyConfig.CR + 1) + m_enemyConfig.CR;
 	float randY = rand() % ((m_window.getSize().y - m_enemyConfig.CR) - m_enemyConfig.CR + 1) + m_enemyConfig.CR;
 
 	float xVelocity = rand() % (int)(m_enemyConfig.SMAX - m_enemyConfig.SMIN + 1) + m_enemyConfig.SMIN;
 	float yVelocity = rand() % (int)(m_enemyConfig.SMAX - m_enemyConfig.SMIN + 1) + m_enemyConfig.SMIN;
+	float angle = atan2f(yVelocity, xVelocity);
 
-	enemy->cTransform = std::make_shared<CTransform>(Vec2(randX, randY), Vec2(xVelocity, yVelocity), 0.0f);
+	enemy->cTransform = std::make_shared<CTransform>(Vec2(randX, randY), Vec2(xVelocity, yVelocity), angle);
 	
 	int vertices = rand() % (m_enemyConfig.VMAX - m_enemyConfig.VMIN + 1) + m_enemyConfig.VMIN;
 	enemy->cShape = std::make_shared<CShape>(
@@ -471,21 +471,29 @@ void Game::spawnEnemy()
 
 void Game::spawnSmallEnemies(std::shared_ptr<Entity> entity)
 {
-	// Todo: spawn at location of input enemy entity
-
 	int vertices = entity->cShape->circle.getPointCount();
+	float vx;
+	float vy;
 
 	for (int i = 0; i < vertices; i++)
 	{
 		auto smallEnemy = m_entityManager.addEntity("smallEnemy");
-		// ...
+		smallEnemy->cShape = std::make_shared<CShape>(
+			m_enemyConfig.SR / 2, // Shape radius
+			vertices, // Sides
+			entity->cShape->circle.getFillColor(), // Fill color
+			entity->cShape->circle.getOutlineColor(), // Outline color
+			m_playerConfig.OT / 2 // Outline thickness
+			);
 		smallEnemy->cScore = std::make_shared<CScore>(entity->cScore->score * 2);
-	}
+		smallEnemy->cCollision = std::make_shared<CCollision>(m_enemyConfig.CR / 2);
+		smallEnemy->cLifespan = std::make_shared<CLifespan>(m_enemyConfig.L);
 
-	// When we create smaller enemy, we have to read the values of the original enemy
-	// - spawn a numebr of small enemies equal to the vertices of the original enemy
-	// - set the color to the same as original, half the size
-	// - small enemies are worth double points
+		vx = entity->cTransform->velocity.x * cosf(360 / vertices * i * M_PI / 180) - entity->cTransform->velocity.y * sinf(360 / vertices * i * M_PI / 180);
+		vy = entity->cTransform->velocity.x * sinf(360 / vertices * i * M_PI / 180) + entity->cTransform->velocity.y * cosf(360 / vertices * i * M_PI / 180);
+
+		smallEnemy->cTransform = std::make_shared<CTransform>(entity->cTransform->pos, Vec2(vx, vy), entity->cTransform->angle);
+	}
 }
 
 // 1. position shooting from
@@ -516,4 +524,59 @@ void Game::spawnBullet(std::shared_ptr<Entity> entity, const Vec2& mousePos)
 void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
 {
 	// TODO
+}
+
+void Game::checkWindowCollision(std::shared_ptr<Entity> entity)
+{
+	if (entity->cTransform->pos.x - entity->cCollision->radius <= 0)
+	{
+		if (!entity->cInput)
+		{
+			entity->cTransform->velocity.x *= -1;
+		}
+		else
+		{
+			entity->cInput->right = false;
+		}
+	}
+	if (entity->cTransform->pos.x + entity->cCollision->radius >= m_window.getSize().x)
+	{
+		if (!entity->cInput) 
+		{
+			entity->cTransform->velocity.x *= -1;
+		}
+		else 
+		{
+			entity->cInput->left = false;
+		}
+	}
+	if (entity->cTransform->pos.y - entity->cCollision->radius <= 0)
+	{
+		if (!entity->cInput)
+		{
+			entity->cTransform->velocity.y *= -1;
+		}
+		else
+		{
+			entity->cInput->up = false;
+		}
+	}
+	if (entity->cTransform->pos.y + entity->cCollision->radius >= m_window.getSize().y)
+	{
+		if (!entity->cInput)
+		{
+			entity->cTransform->velocity.y *= -1;
+		}
+		else
+		{
+			entity->cInput->down = false;
+		}
+	}
+}
+
+void Game::restart()
+{
+	m_score = 0;
+	m_entityManager.clearEntities();
+	spawnPlayer();
 }

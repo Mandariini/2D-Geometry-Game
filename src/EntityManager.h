@@ -14,6 +14,7 @@ public:
 	EntityManager();
 
 	void update();
+	void clearEntities();
 
 	std::shared_ptr<Entity> addEntity(const std::string& tag);
 
