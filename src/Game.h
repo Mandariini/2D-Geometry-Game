@@ -6,7 +6,7 @@
 
 #include <fstream>
 
-struct PlayerConfig { int SR, CR, FR, FG, FB, OR, OG, OB, OT, V; float S; };
+struct PlayerConfig { int SR, CR, FR, FG, FB, OR, OG, OB, OT, V, Firerate; float S; };
 struct EnemyConfig { int SR, CR, OR, OG, OB, OT, VMIN, VMAX, L, SI; float SMIN, SMAX; };
 struct BullectConfig { int SR, CR, FR, FG, FB, OR, OG, OB, OT, V, L; float S; };
 
@@ -42,7 +42,8 @@ private:
 	std::shared_ptr<Entity> m_player;
 
 	sf::Font m_font;
-	sf::Text m_text;
+	sf::Text m_textScore;
+	sf::Text m_textPause;
 
 	PlayerConfig m_playerConfig;
 	EnemyConfig m_enemyConfig;
@@ -51,6 +52,7 @@ private:
 	int m_score = 0;
 	int m_currentFrame = 0;
 	int m_lastEnemySpawnTime = 0;
+	int m_lastBulletTime = 0;
 
 	bool m_paused = false; // update game logic
 	bool m_running = true;

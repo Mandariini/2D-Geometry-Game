@@ -7,26 +7,20 @@ Game::Game(const std::string& config)
 
 void Game::run()
 {
-	// TODO: add pause functionality
-	// Some systems should function while paused (rendering)
-	// some should not (movement / input)
 	while (m_running)
 	{
 		m_entityManager.update();
 
+		sUserInput();
 		if (!m_paused)
 		{
-
+			sCollision();
+			sMovement();
+			sLifespan();
+			sEnemySpawner();
+			m_currentFrame++;
 		}
-
-		sMovement();
-		sUserInput();
-		sLifespan();
-		sEnemySpawner();
-		sCollision();
 		sRender();
-
-		m_currentFrame++;
 	}
 }
 
@@ -51,6 +45,7 @@ void Game::init(const std::string& config)
 	float speed = 1; // player and bullet
 	int vertices; // player and bullet
 	int fillR, fillG, fillB; // player and bullet
+	int firerate = 15; // player
 
 	int textWidth, textR, textG, textB;
 
@@ -72,16 +67,24 @@ void Game::init(const std::string& config)
 			}
 			else
 			{
-				m_text.setFont(m_font);
-				m_text.setString("Points: 99999");
-				m_text.setCharacterSize(textWidth);
-				m_text.setFillColor(sf::Color(textR, textG, textB, 255));
-				m_text.setPosition(wWidth - m_text.getLocalBounds().width, 0);
+				m_textScore.setFont(m_font);
+				m_textScore.setString("Points: 99999");
+				m_textScore.setCharacterSize(textWidth);
+				m_textScore.setFillColor(sf::Color(textR, textG, textB, 255));
+				m_textScore.setPosition(wWidth - m_textScore.getLocalBounds().width, 0);
+
+				m_textPause.setFont(m_font);
+				m_textPause.setString("ESC to pause");
+				m_textPause.setCharacterSize(textWidth);
+				m_textPause.setFillColor(sf::Color(textR, textG, textB, 255));
+				m_textPause.setPosition(0, 0);
 			}
 		}
 		else if (type == "Player")
 		{
-			fin >> shapeRadius >> collisionRadius >> speed >> fillR >> fillG >> fillB >> outlineR >> outlineG >> outlineB >> outlineThickness >> vertices;
+			fin >> shapeRadius >> collisionRadius >> speed >> fillR >> fillG >> fillB 
+				>> outlineR >> outlineG >> outlineB >> outlineThickness 
+				>> vertices >> firerate;
 
 			m_playerConfig.SR = shapeRadius;
 			m_playerConfig.CR = collisionRadius;
@@ -94,6 +97,7 @@ void Game::init(const std::string& config)
 			m_playerConfig.OB = outlineB;
 			m_playerConfig.OT = outlineThickness;
 			m_playerConfig.V = vertices;
+			m_playerConfig.Firerate = firerate;
 		}
 		else if (type == "Enemy")
 		{
@@ -212,12 +216,13 @@ void Game::sUserInput()
 			case sf::Keyboard::Left:
 				m_player->cInput->right = true;
 				break;
+			case sf::Keyboard::Escape:
+				m_paused = !m_paused;
 			}
 		}
 
 		if (event.type == sf::Event::KeyReleased)
 		{
-			// Set input components to false
 			switch (event.key.code)
 			{
 			case sf::Keyboard::W:
@@ -244,13 +249,15 @@ void Game::sUserInput()
 			if (event.mouseButton.button == sf::Mouse::Left)
 			{
 				std::cout << event.mouseButton.x << "," << event.mouseButton.y << std::endl;
-				//m_player->cInput->shoot = true;
 				spawnBullet(m_player, Vec2(event.mouseButton.x, event.mouseButton.y));
 			}
 
 			if (event.mouseButton.button == sf::Mouse::Right)
 			{
-				// call spawnSpecialWeapon
+				if (!m_paused)
+				{
+					// call spawnSpecialWeapon
+				}
 			}
 		}
 	}
@@ -270,15 +277,24 @@ void Game::sRender()
 		m_window.draw(e->cShape->circle);
 	}
 
-	m_text.setString("Points: " + std::to_string(m_score));
-	m_window.draw(m_text);
+	if (m_paused)
+	{
+		m_textPause.setString("ESC to unpause");
+	}
+	else if (!m_paused)
+	{
+		m_textPause.setString("ESC to pause");
+	}
+
+	m_textScore.setString("Points: " + std::to_string(m_score));
+	m_window.draw(m_textScore);
+	m_window.draw(m_textPause);
 
 	m_window.display();
 }
 
 void Game::sEnemySpawner()
 {
-	// (m_currentFrame - m_lastEnemySpawnTime) to determine how long has been
 	if (m_currentFrame - m_lastEnemySpawnTime >= m_enemyConfig.SI)
 	{
 		spawnEnemy();
@@ -287,6 +303,8 @@ void Game::sEnemySpawner()
 
 void Game::sCollision()
 {
+	// TODO: implement enemy hierarchy to simplify loops
+
 	// Player and enemy collision
 	for (auto& p : m_entityManager.getEntities("player"))
 	{
@@ -473,24 +491,26 @@ void Game::spawnSmallEnemies(std::shared_ptr<Entity> entity)
 // 1. position shooting from
 void Game::spawnBullet(std::shared_ptr<Entity> entity, const Vec2& mousePos)
 {
-	// bullet speed is given as a scalar speed, pixels per frame added to the bullet
-	// set the velocity by using formula, traveling x-axel vs traveling 45 degree angle
+	if (m_currentFrame - m_lastBulletTime >= m_playerConfig.Firerate)
+	{
+		float dist = entity->cTransform->pos.dist(mousePos);
+		Vec2 normalizedVec = (mousePos - entity->cTransform->pos) / dist;
+		float vx = cosf(45 * M_PI / 180) * normalizedVec.x * m_bulletConfig.S;
+		float vy = sinf(45 * M_PI / 180) * normalizedVec.y * m_bulletConfig.S;
+		float angle = atan2f(vy, vx);
+		auto bullet = m_entityManager.addEntity("bullet");
 
-	float dist = entity->cTransform->pos.dist(mousePos);
-	Vec2 normalizedVec = (mousePos - entity->cTransform->pos) / dist;
-	float vx = cosf(45 * M_PI / 180) * normalizedVec.x * m_bulletConfig.S;
-	float vy = sinf(45 * M_PI / 180) * normalizedVec.y * m_bulletConfig.S;
-
-	auto bullet = m_entityManager.addEntity("bullet");
-
-	bullet->cTransform = std::make_shared<CTransform>(entity->cTransform->pos, Vec2(vx, vy), 0.0f);
-	bullet->cShape = std::make_shared<CShape>(m_bulletConfig.SR,
-		m_bulletConfig.V, 
-		sf::Color(m_bulletConfig.FR, m_bulletConfig.FG, m_bulletConfig.FB, 255),
-		sf::Color(m_bulletConfig.OR, m_bulletConfig.OG, m_bulletConfig.OB),
-		m_bulletConfig.OT);
-	bullet->cCollision = std::make_shared<CCollision>(m_bulletConfig.CR);
-	bullet->cLifespan = std::make_shared<CLifespan>(m_bulletConfig.L);
+		bullet->cTransform = std::make_shared<CTransform>(entity->cTransform->pos, Vec2(vx, vy), angle);
+		bullet->cShape = std::make_shared<CShape>(
+			m_bulletConfig.SR,
+			m_bulletConfig.V,
+			sf::Color(m_bulletConfig.FR, m_bulletConfig.FG, m_bulletConfig.FB, 255),
+			sf::Color(m_bulletConfig.OR, m_bulletConfig.OG, m_bulletConfig.OB),
+			m_bulletConfig.OT);
+		bullet->cCollision = std::make_shared<CCollision>(m_bulletConfig.CR);
+		bullet->cLifespan = std::make_shared<CLifespan>(m_bulletConfig.L);
+		m_lastBulletTime = m_currentFrame;
+	}
 }
 
 void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
