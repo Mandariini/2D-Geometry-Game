@@ -80,6 +80,13 @@ bool Vec2::operator!=(const Vec2& rhs) const
 	return ((x != rhs.x) && (y != rhs.y));
 }
 
+Vec2 Vec2::rotate(const Vec2& vec, float rad)
+{
+	float xR = vec.x * cosf(rad) - vec.y * sinf(rad);
+	float yR = vec.x * sinf(rad) + vec.y * cosf(rad);
+	return Vec2(xR, yR);
+}
+
 std::ostream& operator<<(std::ostream& os, const Vec2& vec)
 {
 	os << vec.x << ", " << vec.y;

@@ -10,6 +10,7 @@ public:
 	friend class EntityManager;
 
 	const std::string& getTag();
+	const std::string& getType();
 	const size_t getId();
 	bool isActive();
 
@@ -26,9 +27,12 @@ public:
 
 private:
 	// Private constructor to only allow entity creation in EntityManager
-	Entity(const std::string& tag, size_t id);
+	Entity(const std::string& tag, const std::string& type, size_t id);
 
 	const size_t m_id = 0;
-	const std::string m_tag = "Default";
+	// E.g. enemy
+	const std::string m_tag = "DefaultTag";
+	// E.g. smallEnemy
+	const std::string m_type = "DefaultType";
 	bool m_active = true;
 };

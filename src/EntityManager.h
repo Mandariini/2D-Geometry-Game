@@ -16,7 +16,7 @@ public:
 	void update();
 	void clearEntities();
 
-	std::shared_ptr<Entity> addEntity(const std::string& tag);
+	std::shared_ptr<Entity> addEntity(const std::string& tag, const std::string& type = "DefaultType");
 
 	EntityVec& getEntities();
 	EntityVec& getEntities(const std::string& tag);

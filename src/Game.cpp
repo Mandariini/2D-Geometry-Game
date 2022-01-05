@@ -26,6 +26,9 @@ void Game::run()
 
 void Game::init(const std::string& config)
 {
+	// Random seed for rand
+	srand(time(NULL));
+
 	int wWidth = 1280;
 	int wHeight = 720;
 	int framerate = 60;
@@ -133,6 +136,23 @@ void Game::init(const std::string& config)
 			m_bulletConfig.V = vertices;
 			m_bulletConfig.L = lifespan;
 		}
+		else if (type == "HomingMissile")
+		{
+			fin >> shapeRadius >> collisionRadius >> speed >> fillR >> fillG >> fillB >> outlineR >> outlineG >> outlineB >> outlineThickness >> vertices >> lifespan;
+		
+			m_homingMissileConfig.SR = shapeRadius;
+			m_homingMissileConfig.CR = collisionRadius;
+			m_homingMissileConfig.S = speed;
+			m_homingMissileConfig.FR = fillR;
+			m_homingMissileConfig.FG = fillG;
+			m_homingMissileConfig.FB = fillB;
+			m_homingMissileConfig.OR = outlineR;
+			m_homingMissileConfig.OG = outlineG;
+			m_homingMissileConfig.OB = outlineB;
+			m_homingMissileConfig.OT = outlineThickness;
+			m_homingMissileConfig.V = vertices;
+			m_homingMissileConfig.L = lifespan;
+		}
 	}
 
 	if (!fullscreen)
@@ -176,6 +196,52 @@ void Game::sMovement()
 	m_player->cTransform->velocity = playerVelocity;
 	m_player->cTransform->pos += m_player->cTransform->velocity;
 
+
+	for (auto& homingMissile : m_entityManager.getEntities("bullet"))
+	{
+		if (homingMissile->getType() != "homingMissile") { continue; }
+
+		std::shared_ptr<Entity> closestEnemy;
+		float smallestDist = std::numeric_limits<float>::max();
+		for (const auto& enemy : m_entityManager.getEntities("enemy"))
+		{
+			float dist = homingMissile->cTransform->pos.dist(enemy->cTransform->pos);
+			if (dist < smallestDist)
+			{
+				smallestDist = dist;
+				closestEnemy = enemy;
+			}
+		}
+
+		if (!closestEnemy) { continue; }
+
+		int pDot = Vec2::perpDot(closestEnemy->cTransform->pos - homingMissile->cTransform->pos, homingMissile->cTransform->velocity);
+		if (pDot < 0)
+		{
+			// Rotate missile counter-clockwise
+			homingMissile->cTransform->velocity = Vec2::rotate(homingMissile->cTransform->velocity, -0.05);
+		}
+		else if (pDot > 0)
+		{
+			// Rotate missile clockwise
+			homingMissile->cTransform->velocity = Vec2::rotate(homingMissile->cTransform->velocity, 0.05);
+		}
+		else
+		{
+			// Either towards or away from target
+			int dot = Vec2::dot(closestEnemy->cTransform->pos - homingMissile->cTransform->pos, homingMissile->cTransform->velocity);
+			if (dot < 0)
+			{
+				// moving directly away target
+				homingMissile->cTransform->velocity = Vec2::rotate(homingMissile->cTransform->velocity, -0.05);
+			}
+			else
+			{
+				// moving directly towards target
+			}
+		}
+	}
+
 	// Move all other entities
 	for (auto& e : m_entityManager.getEntities())
 	{
@@ -201,7 +267,6 @@ void Game::sUserInput()
 			{
 			case sf::Keyboard::W:
 			case sf::Keyboard::Up:
-				std::cout << "W press" << std::endl;
 				m_player->cInput->up = true;
 				break;
 			case sf::Keyboard::S:
@@ -248,16 +313,12 @@ void Game::sUserInput()
 		{
 			if (event.mouseButton.button == sf::Mouse::Left)
 			{
-				std::cout << event.mouseButton.x << "," << event.mouseButton.y << std::endl;
 				spawnBullet(m_player, Vec2(event.mouseButton.x, event.mouseButton.y));
 			}
 
 			if (event.mouseButton.button == sf::Mouse::Right)
 			{
-				if (!m_paused)
-				{
-					// call spawnSpecialWeapon
-				}
+				spawnSpecialWeapon(m_player, Vec2(event.mouseButton.x, event.mouseButton.y));
 			}
 		}
 	}
@@ -319,68 +380,16 @@ void Game::sCollision()
 				break;
 			}
 		}
-		for (auto& e : m_entityManager.getEntities("smallEnemy"))
-		{
-			// distance between entities < sum of the radiases = collision
-			float dist = p->cTransform->pos.dist(e->cTransform->pos);
-			if (dist < (p->cCollision->radius + e->cCollision->radius))
-			{
-				p->destroy();
-				restart();
-				break;
-			}
-		}
 	}
 
-	// Bullet and enemy collision
+	// Bullet/missile and enemy collision
 	for (auto& b : m_entityManager.getEntities("bullet"))
 	{
-		for (auto& e : m_entityManager.getEntities("enemy"))
-		{
-			// distance between entities < sum of the radiases = collision
-			float dist = b->cTransform->pos.dist(e->cTransform->pos);
-
-			if (dist < (b->cCollision->radius + e->cCollision->radius))
-			{
-				b->destroy();
-				//m_player->cInput->shoot = false;
-				spawnSmallEnemies(e);
-				e->destroy();
-				m_score += e->cScore->score;
-				continue;
-			}
-		}
-		for (auto& e : m_entityManager.getEntities("smallEnemy"))
-		{
-			// distance between entities < sum of the radiases = collision
-			float dist = b->cTransform->pos.dist(e->cTransform->pos);
-
-			if (dist < (b->cCollision->radius + e->cCollision->radius))
-			{
-				b->destroy();
-				//m_player->cInput->shoot = false;
-				e->destroy();
-				m_score += e->cScore->score;
-				continue;
-			}
-		}
-		if (b->cTransform->pos.x < 0 ||
-			b->cTransform->pos.x > m_window.getSize().x ||
-			b->cTransform->pos.y < 0 ||
-			b->cTransform->pos.y > m_window.getSize().y)
-		{
-			b->destroy();
-			//m_player->cInput->shoot = false;
-		}
+		checkBulletEnemyCollision(b);
 	}
 
 	// Enemies and small enemies bounce off falls
 	for (auto& e : m_entityManager.getEntities("enemy"))
-	{
-		checkWindowCollision(e);
-	}
-
-	for (auto& e : m_entityManager.getEntities("smallEnemy"))
 	{
 		checkWindowCollision(e);
 	}
@@ -442,17 +451,24 @@ void Game::spawnPlayer()
 
 void Game::spawnEnemy()
 {
-	auto enemy = m_entityManager.addEntity("enemy");
+	auto enemy = m_entityManager.addEntity("enemy", "regular");
 
-	// Random between min and max: rand()%(max-min+1)+min
-	float randX = rand() % ((m_window.getSize().x - m_enemyConfig.CR) - m_enemyConfig.CR + 1) + m_enemyConfig.CR;
-	float randY = rand() % ((m_window.getSize().y - m_enemyConfig.CR) - m_enemyConfig.CR + 1) + m_enemyConfig.CR;
+	int distFromPlayerSquared = std::numeric_limits<int>::min();
+	float randX = 50, randY = 50;
+	// Minimum enemy spawn location from player based on collision radius
+	while (distFromPlayerSquared < m_player->cCollision->radius * m_player->cCollision->radius * 3)
+	{
+		// Random between min and max: rand()%(max-min+1)+min
+		randX = rand() % ((m_window.getSize().x - m_enemyConfig.CR) - m_enemyConfig.CR + 1) + m_enemyConfig.CR;
+		randY = rand() % ((m_window.getSize().y - m_enemyConfig.CR) - m_enemyConfig.CR + 1) + m_enemyConfig.CR;
+		distFromPlayerSquared = (randX + m_player->cTransform->pos.x) * (randX + m_player->cTransform->pos.x) + 
+			(randY + m_player->cTransform->pos.y) * (randY + m_player->cTransform->pos.y);
+	}
 
 	float xVelocity = rand() % (int)(m_enemyConfig.SMAX - m_enemyConfig.SMIN + 1) + m_enemyConfig.SMIN;
 	float yVelocity = rand() % (int)(m_enemyConfig.SMAX - m_enemyConfig.SMIN + 1) + m_enemyConfig.SMIN;
-	float angle = atan2f(yVelocity, xVelocity);
 
-	enemy->cTransform = std::make_shared<CTransform>(Vec2(randX, randY), Vec2(xVelocity, yVelocity), angle);
+	enemy->cTransform = std::make_shared<CTransform>(Vec2(randX, randY), Vec2(xVelocity, yVelocity), 0.0f);
 	
 	int vertices = rand() % (m_enemyConfig.VMAX - m_enemyConfig.VMIN + 1) + m_enemyConfig.VMIN;
 	enemy->cShape = std::make_shared<CShape>(
@@ -477,7 +493,7 @@ void Game::spawnSmallEnemies(std::shared_ptr<Entity> entity)
 
 	for (int i = 0; i < vertices; i++)
 	{
-		auto smallEnemy = m_entityManager.addEntity("smallEnemy");
+		auto smallEnemy = m_entityManager.addEntity("enemy", "smallEnemy");
 		smallEnemy->cShape = std::make_shared<CShape>(
 			m_enemyConfig.SR / 2, // Shape radius
 			vertices, // Sides
@@ -489,10 +505,9 @@ void Game::spawnSmallEnemies(std::shared_ptr<Entity> entity)
 		smallEnemy->cCollision = std::make_shared<CCollision>(m_enemyConfig.CR / 2);
 		smallEnemy->cLifespan = std::make_shared<CLifespan>(m_enemyConfig.L);
 
-		vx = entity->cTransform->velocity.x * cosf(360 / vertices * i * M_PI / 180) - entity->cTransform->velocity.y * sinf(360 / vertices * i * M_PI / 180);
-		vy = entity->cTransform->velocity.x * sinf(360 / vertices * i * M_PI / 180) + entity->cTransform->velocity.y * cosf(360 / vertices * i * M_PI / 180);
-
-		smallEnemy->cTransform = std::make_shared<CTransform>(entity->cTransform->pos, Vec2(vx, vy), entity->cTransform->angle);
+		// Rotate each smallEnemy evenly from destroyed regular enemy
+		Vec2 rotatedVelocity = Vec2::rotate(entity->cTransform->velocity, 360 / vertices * i * M_PI / 180);
+		smallEnemy->cTransform = std::make_shared<CTransform>(entity->cTransform->pos, rotatedVelocity, entity->cTransform->angle);
 	}
 }
 
@@ -505,10 +520,9 @@ void Game::spawnBullet(std::shared_ptr<Entity> entity, const Vec2& mousePos)
 		Vec2 normalizedVec = (mousePos - entity->cTransform->pos) / dist;
 		float vx = cosf(45 * M_PI / 180) * normalizedVec.x * m_bulletConfig.S;
 		float vy = sinf(45 * M_PI / 180) * normalizedVec.y * m_bulletConfig.S;
-		float angle = atan2f(vy, vx);
 		auto bullet = m_entityManager.addEntity("bullet");
 
-		bullet->cTransform = std::make_shared<CTransform>(entity->cTransform->pos, Vec2(vx, vy), angle);
+		bullet->cTransform = std::make_shared<CTransform>(entity->cTransform->pos, Vec2(vx, vy), 0.0f);
 		bullet->cShape = std::make_shared<CShape>(
 			m_bulletConfig.SR,
 			m_bulletConfig.V,
@@ -521,9 +535,23 @@ void Game::spawnBullet(std::shared_ptr<Entity> entity, const Vec2& mousePos)
 	}
 }
 
-void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
+void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity, const Vec2& mousePos)
 {
-	// TODO
+	float dist = entity->cTransform->pos.dist(mousePos);
+	Vec2 normalizedVec = (mousePos - entity->cTransform->pos) / dist;
+	float vx = cosf(45 * M_PI / 180) * normalizedVec.x * m_homingMissileConfig.S;
+	float vy = sinf(45 * M_PI / 180) * normalizedVec.y * m_homingMissileConfig.S;
+	auto bullet = m_entityManager.addEntity("bullet", "homingMissile");
+
+	bullet->cTransform = std::make_shared<CTransform>(entity->cTransform->pos, Vec2(vx, vy), 0.0f);
+	bullet->cShape = std::make_shared<CShape>(
+		m_homingMissileConfig.SR,
+		m_homingMissileConfig.V,
+		sf::Color(m_homingMissileConfig.FR, m_homingMissileConfig.FG, m_homingMissileConfig.FB, 255),
+		sf::Color(m_homingMissileConfig.OR, m_homingMissileConfig.OG, m_homingMissileConfig.OB),
+		m_homingMissileConfig.OT);
+	bullet->cCollision = std::make_shared<CCollision>(m_homingMissileConfig.CR);
+	bullet->cLifespan = std::make_shared<CLifespan>(m_homingMissileConfig.L);
 }
 
 void Game::checkWindowCollision(std::shared_ptr<Entity> entity)
@@ -571,6 +599,36 @@ void Game::checkWindowCollision(std::shared_ptr<Entity> entity)
 		{
 			entity->cInput->down = false;
 		}
+	}
+}
+
+void Game::checkBulletEnemyCollision(std::shared_ptr<Entity> b)
+{
+	for (auto& e : m_entityManager.getEntities("enemy"))
+	{
+		// distance between entities < sum of the radiases = collision
+		float dist = b->cTransform->pos.dist(e->cTransform->pos);
+
+		if (dist < (b->cCollision->radius + e->cCollision->radius))
+		{
+			b->destroy();
+			//m_player->cInput->shoot = false;
+			e->destroy();
+			m_score += e->cScore->score;
+			if (e->getType() == "regular") 
+			{ 
+				spawnSmallEnemies(e); 
+			}
+			break;
+		}
+	}
+	if (b->cTransform->pos.x < 0 ||
+		b->cTransform->pos.x > m_window.getSize().x ||
+		b->cTransform->pos.y < 0 ||
+		b->cTransform->pos.y > m_window.getSize().y)
+	{
+		b->destroy();
+		//m_player->cInput->shoot = false;
 	}
 }
 

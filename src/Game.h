@@ -33,9 +33,10 @@ private:
 	void spawnEnemy();
 	void spawnSmallEnemies(std::shared_ptr<Entity> entity);
 	void spawnBullet(std::shared_ptr<Entity> entity, const Vec2& mousePos);
-	void spawnSpecialWeapon(std::shared_ptr<Entity> entity);
+	void spawnSpecialWeapon(std::shared_ptr<Entity> entity, const Vec2& mousePos);
 
 	void checkWindowCollision(std::shared_ptr<Entity> entity);
+	void checkBulletEnemyCollision(std::shared_ptr<Entity> b);
 	void restart();
 
 	sf::RenderWindow m_window;
@@ -51,6 +52,7 @@ private:
 	PlayerConfig m_playerConfig;
 	EnemyConfig m_enemyConfig;
 	BullectConfig m_bulletConfig;
+	BullectConfig m_homingMissileConfig;
 
 	int m_score = 0;
 	int m_currentFrame = 0;

@@ -24,6 +24,10 @@ public:
 	bool operator == (const Vec2& rhs) const;
 	bool operator != (const Vec2& rhs) const;
 
+	inline static float perpDot(const Vec2& a, const Vec2& b) { return (a.y * b.x) - (a.x * b.y); };
+	inline static float dot(const Vec2& a, const Vec2& b) { return (a.x * b.x) + (a.y * b.y); };
+	static Vec2 rotate(const Vec2& vec, float rad);
+
 	friend std::ostream& operator<<(std::ostream& os, const Vec2& vec);
 
 	double x;
